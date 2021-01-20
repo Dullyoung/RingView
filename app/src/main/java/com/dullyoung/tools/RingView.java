@@ -12,6 +12,7 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Xfermode;
 import android.util.Log;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -21,19 +22,40 @@ import androidx.constraintlayout.widget.ConstraintLayout;
  * Created by　Dullyoung on 2021/1/20
  */
 public class RingView extends ConstraintLayout {
-    public RingView(@NonNull Context context) {
+    public RingView(@NonNull Context context, int radius) {
         super(context);
+        setBackgroundColor(Color.TRANSPARENT);
+        this.radius = radius;
     }
 
-    int[] colors;
-    float[] percents;
-    int ringWidths;
+    private int radius;
+    private int[] colors;
+    private float[] percents;
+    private int ringWidths;
 
+    /**
+     * @param colors    颜色
+     * @param percents  占比
+     * @param ringWidth 圆环宽度 单位px
+     */
     public void setData(int[] colors, float[] percents, int ringWidth) {
         this.colors = colors;
         this.percents = percents;
         this.ringWidths = ringWidth;
         init();
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        setRadius(radius);
+    }
+
+    public void setRadius(int radius) {
+        ViewGroup.LayoutParams layoutParams = getLayoutParams();
+        layoutParams.width = radius;
+        layoutParams.height = radius;
+        setLayoutParams(layoutParams);
     }
 
 
@@ -56,6 +78,10 @@ public class RingView extends ConstraintLayout {
         }
     }
 
+    /**
+     * @param index 当前模块的坐标
+     * @return 到当前模块结束总共占据多数度 返回度数
+     */
     private float getTotalPercent(int index) {
         if (index < 0) {
             return 0;
@@ -67,51 +93,43 @@ public class RingView extends ConstraintLayout {
         return range * 360;
     }
 
-    private float gteLastEnd(int index) {
+    /**
+     * @param index 当前模块的坐标
+     * @return 上一个模块绘制的终点  即这个模块绘制的起点
+     */
+    private float getLastEnd(int index) {
         return getTotalPercent(index - 1);
     }
+
 
     @SuppressLint("DrawAllocation")
     @Override
     protected void onDraw(Canvas canvas) {
         RectF oval = new RectF(ringWidths, ringWidths, getWidth() - ringWidths, getHeight() - ringWidths);
-        //当所有的都绘制完了 就一次性把所有的绘制出来 不在做动画
-        if (currentAngle >= 360) {
-            if (currentColorIndex > 0) {
-                for (int i = 0; i <= currentColorIndex; i++) {
-                    canvas.drawArc(oval, gteLastEnd(i), getTotalPercent(i) - gteLastEnd(i), false, mPaints[i]);
-                }
-            }
+
+        for (int i = 0; i < getCurrentCount(); i++) {
+            canvas.drawArc(oval, getLastEnd(i), currentAngle - getLastEnd(i), false, mPaints[i]);
         }
 
-
-        if (currentAngle < getTotalPercent(currentColorIndex)) {
-            //动态绘制新的圆环
-            for (int i = 0; i <= currentColorIndex; i++) {
-                canvas.drawArc(oval, gteLastEnd(currentColorIndex),
-                        currentAngle - gteLastEnd(currentColorIndex), false, mPaints[currentColorIndex]);
-            }
-
-            //绘制之前已经动画走完的圆环
-            if (currentColorIndex > 0) {
-                for (int i = 0; i < currentColorIndex; i++) {
-                    canvas.drawArc(oval, gteLastEnd(i),
-                            getTotalPercent(i) - gteLastEnd(i), false, mPaints[i]);
-                }
-            }
-        } else {//这个百分比的弧度绘制完了 下标+1继续绘制下一个
-            currentColorIndex++;
-            if (currentColorIndex >= percents.length) {
-                currentColorIndex = percents.length - 1;
-            }
-        }
     }
 
-    int currentColorIndex = 0;
+    /**
+     * @return 当前绘制到了第几个模块
+     */
+    private int getCurrentCount() {
+        int count = 0;
+        for (int i = 0; i < percents.length; i++) {
+            if (currentAngle > getTotalPercent(i - 1)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
 
     private int currentAngle = 0;
 
-    public void startAnim(int duration) {
+    public void setDurationAndStartAnim(int duration) {
         ValueAnimator valueAnimator = ValueAnimator.ofInt(0, 360);
         valueAnimator.setDuration(duration);
         valueAnimator.addUpdateListener(animation -> {

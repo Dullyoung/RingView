@@ -67,14 +67,11 @@ public class MainActivity extends BaseActivity {
 
             }
         });
-        RingView ringView = new RingView(this);
+        RingView ringView = new RingView(this, 400);
         ringView.setData(new int[]{0xffff9b27, 0xffff0025, 0xff000000, 0xff663000},
                 new float[]{0.2f, 0.2f, 0.3f, 0.3f}, 40);
-        ringView.setBackgroundColor(Color.TRANSPARENT);
-        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(300, 300);
-        ringView.setLayoutParams(layoutParams);
         mLlRoot.addView(ringView);
-        ringView.startAnim(6000);
+        ringView.setDurationAndStartAnim(6000);
     }
 
     public void saveBrightness(Activity activity, int brightness) {
